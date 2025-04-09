@@ -1,0 +1,119 @@
+create table Users (
+    ID serial primary key, -- Уникальный идентификатор пользователя
+    AccountName varchar(200) unique not null, -- Логин пользователя (уникальный)
+	Username varchar(200) not null, -- Имя пользователя (уникальный)
+    CreatedAt timestamp default current_timestamp not null, -- Дата регистрации пользователя
+    IsActive boolean default true not null-- Флаг активности пользователя (true = активен, false = заблокирован/удален)
+);
+
+-- Добавление комментариев
+comment on column Users.ID is 'Уникальный идентификатор пользователя';
+comment on column Users.AccountName is 'Логин пользователя (уникальный)';
+comment on column Users.Username is 'Имя пользователя (обязательное )';
+comment on column Users.CreatedAt is 'Дата регистрации пользователя';
+comment on column Users.IsActive is 'Флаг активности пользователя (true = активен, false = заблокирован/удален)';
+
+------------------------------------------------------------------------------------
+
+create table Authors (
+    ID serial primary key, -- Уникальный идентификатор автора
+    FullName varchar(100) not null, -- Полное имя автора
+    CreatedAt timestamp default current_timestamp, -- Дата добавления автора в систему
+    IsActive boolean default true -- Флаг активности автора (true = активен, false = скрыт из каталога)
+);
+
+-- Добавление комментариев
+comment on column Authors.ID is 'Уникальный идентификатор автора';
+comment on column Authors.FullName is 'Полное имя автора';
+comment on column Authors.CreatedAt is 'Дата добавления автора в систему';
+comment on column Authors.IsActive is 'Флаг активности автора (true = активен, false = скрыт из каталога)';
+
+------------------------------------------------------------------------------------
+
+create table Books (
+    ID serial primary key, -- Уникальный идентификатор книги
+    Title varchar(255) not null, -- Название книги
+    AuthorID int references Authors(ID) on delete set null, -- Идентификатор автора книги
+    Description text, -- Описание книги
+    PublicationYear int, -- Год публикации книги
+    Price decimal(10, 2) not null, -- Цена книги
+    StockQuantity int default 0, -- Количество экземпляров книги в наличии
+    CreatedAt timestamp default current_timestamp, -- Дата добавления книги в систему
+    IsActive boolean default true -- Флаг активности книги (true = доступна, false = недоступна)
+);
+
+-- Добавление комментариев
+comment on column Books.ID is 'Уникальный идентификатор книги';
+comment on column Books.Title is 'Название книги';
+comment on column Books.AuthorID is 'Идентификатор автора книги';
+comment on column Books.Description is 'Описание книги';
+comment on column Books.PublicationYear is 'Год публикации книги';
+comment on column Books.Price is 'Цена книги';
+comment on column Books.StockQuantity is 'Количество экземпляров книги в наличии';
+comment on column Books.CreatedAt is 'Дата добавления книги в систему';
+comment on column Books.IsActive is 'Флаг активности книги (true = доступна, false = недоступна)';
+
+------------------------------------------------------------------------------------
+
+create table Categories (
+    ID serial primary key, -- Уникальный идентификатор категории
+    Name varchar(100) not null, -- Название категории
+    Description text -- Описание категории
+);
+
+-- Добавление комментариев
+comment on column Categories.ID is 'Уникальный идентификатор категории';
+comment on column Categories.Name is 'Название категории';
+comment on column Categories.Description is 'Описание категории';
+
+------------------------------------------------------------------------------------
+
+create table BooksCategories (
+    BookID int references Books(ID) on delete cascade, -- Идентификатор книги
+    CategoryID int references Categories(ID) on delete cascade, -- Идентификатор категории
+    primary key (BookID, CategoryID) -- Первичный ключ: комбинация BookID и CategoryID
+);
+
+-- Добавление комментариев
+comment on column BooksCategories.BookID is 'Идентификатор книги';
+comment on column BooksCategories.CategoryID is 'Идентификатор категории';
+
+------------------------------------------------------------------------------------
+
+create table Cart (
+    ID serial primary key, -- Уникальный идентификатор записи в корзине
+    UserID int references Users(ID) on delete cascade, -- Идентификатор пользователя
+    BookID int references Books(ID) on delete cascade, -- Идентификатор книги
+    Quantity int default 1 -- Количество единиц книги в корзине
+);
+
+-- Добавление комментариев
+comment on column Cart.ID is 'Уникальный идентификатор записи в корзине';
+comment on column Cart.UserID is 'Идентификатор пользователя';
+comment on column Cart.BookID is 'Идентификатор книги';
+comment on column Cart.Quantity is 'Количество единиц книги в корзине';
+
+------------------------------------------------------------------------------------
+
+create table UsersTicket (
+    ID serial primary key, -- Уникальный идентификатор записи о покупке
+    UserID int references Users(ID) on delete cascade, -- Идентификатор пользователя
+    BookID int references Books(ID) on delete cascade, -- Идентификатор книги
+    Quantity int default 1, -- Количество единиц книги в корзине
+	Price decimal(10, 2) not null, -- Итоговая цена покупки
+    PurchaseDate timestamp default current_timestamp -- Дата покупки или скачивания
+);
+
+-- Добавление комментариев
+comment on column UsersTicket.ID is 'Уникальный идентификатор записи о покупке';
+comment on column UsersTicket.UserID is 'Идентификатор пользователя';
+comment on column UsersTicket.BookID is 'Идентификатор книги';
+comment on column UsersTicket.Quantity is 'Количество кинг';
+comment on column UsersTicket.Price is 'Итоговая цена покупки';
+comment on column UsersTicket.PurchaseDate is 'Дата покупки';
+
+
+
+
+
+

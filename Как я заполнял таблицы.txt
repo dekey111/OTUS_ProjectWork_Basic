@@ -1,0 +1,52 @@
+-- Заполнение таблицы Categories
+insert into Categories (Name, Description)
+select
+    'Category ' || i as Name, -- Название категории
+    'Description for Category ' || i as Description -- Описание категории
+from generate_series(1, 25) as i;
+
+
+-- Заполнение таблицы Authors
+insert into Authors (FullName, IsActive)
+select
+    'Author ' || i as FullName, -- Полное имя автора
+    case when random() < 0.8 then true else false end as IsActive -- Флаг активности (80% авторов активны)
+from generate_series(1, 100) as i;
+
+
+-- Заполнение таблицы Books
+insert into Books (Title, AuthorID, Description, PublicationYear, Price, StockQuantity, IsActive)
+select
+    'Book ' || i as Title,
+    (random() * 99 + 1)::int as AuthorID,
+    'Description for Book ' || i as Description,
+    1900 + (random() * 123)::int as PublicationYear,
+    (random() * 50 + 5)::numeric(10, 2) as Price,
+    (random() * 50)::int as StockQuantity,
+    true as IsActive
+from generate_series(1, 100) as i;
+
+
+-- Заполнение таблицы BooksCategories
+insert into BooksCategories (BookID, CategoryID)
+select BookID, CategoryID
+from (
+    select
+        b.ID as BookID, -- ID книги
+        c.ID as CategoryID, -- ID категории
+        row_number() over (partition by b.ID order by random()) as rn -- Нумерация категорий для каждой книги
+    from Books b
+    cross join Categories c
+) subquery
+where rn <= floor(random() * 3 + 1); -- От 1 до 3 случайных категорий для каждой книги
+
+
+select * from books 
+select * from authors
+select * from categories
+select * from bookscategories
+
+
+
+
+
