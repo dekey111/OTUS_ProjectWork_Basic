@@ -8,10 +8,10 @@ namespace OTUS_ProjectWork_Basic.Interfaces
 {
     public interface IRepository<T> where T : class
     {
-        IEnumerable<T> GetAll();
+        void Add(T entity);
+        void Update(T entity);
+        void Remove(T entity);
         T GetById(int id);
-        T Add(T entity);
-        T Update(T entity);
-        void Delete(int id);
+        IEnumerable<T> GetAll();
     }
 }

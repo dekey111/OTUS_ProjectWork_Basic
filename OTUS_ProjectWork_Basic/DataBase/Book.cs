@@ -48,7 +48,7 @@ public partial class Book
     /// <summary>
     /// Флаг активности книги (true = доступна, false = недоступна)
     /// </summary>
-    public bool? Isactive { get; set; }
+    public bool Isactive { get; set; }
 
     public virtual Author? Author { get; set; }
 

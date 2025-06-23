@@ -23,7 +23,7 @@ public partial class Author
     /// <summary>
     /// Флаг активности автора (true = активен, false = скрыт из каталога)
     /// </summary>
-    public bool? Isactive { get; set; }
+    public bool Isactive { get; set; }
 
     public virtual ICollection<Book> Books { get; set; } = new List<Book>();
 }
