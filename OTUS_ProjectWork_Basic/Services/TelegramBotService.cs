@@ -7,6 +7,7 @@ using Telegram.Bot.Types;
 
 public class TelegramBotService
 {
+    private readonly IUserRepository _userRepository;
     private readonly IBookRepository _bookRepository;
     private readonly ICartRepository _cartRepository;
     private readonly IOrderRepository _orderRepository;
@@ -14,11 +15,13 @@ public class TelegramBotService
     private readonly Dictionary<long, UserState> _userStates;
 
     public TelegramBotService(
+        IUserRepository userRepository,
         IBookRepository bookRepository,
         ICartRepository cartRepository,
         IOrderRepository orderRepository,
         string botToken)
     {
+        _userRepository = userRepository;
         _bookRepository = bookRepository;
         _cartRepository = cartRepository;
         _orderRepository = orderRepository;
@@ -64,6 +67,13 @@ public class TelegramBotService
         switch (message.Text)
         {
             case "/start":
+                var user =  _userRepository.GetOrCreateUserAsync(
+                    telegramId: userId,
+                    accountName: message.Chat.Username,
+                    username: message.Chat.LastName + " " + message.Chat.FirstName,
+                    createdate: DateTime.Now,
+                    isActiv: true);
+
                 await ShowMainMenu(chatId);
                 break;
             case "🔍 Поиск книг":
@@ -105,77 +115,84 @@ public class TelegramBotService
 
     private async Task HandleCallbackQueryAsync(ITelegramBotClient botClient, CallbackQuery callbackQuery, CancellationToken cancellationToken)
     {
-        var chatId = callbackQuery.Message.Chat.Id;
-        var userId = (int)chatId;
-        var callbackData = callbackQuery.Data;
-        var userState = _userStates[chatId];
+        try
+        {
+            var chatId = callbackQuery.Message.Chat.Id;
+            var userId = (int)chatId;
+            var callbackData = callbackQuery.Data;
+            var userState = _userStates[chatId];
 
-        // Обработка нажатия на автора
-        if (userState.CurrentMenu == MenuState.SearchByAuthor && int.TryParse(callbackData, out var authorId))
-        {
-            var books = _bookRepository.GetByAuthor(authorId);
-            await ShowBooks(chatId, books, "Книги этого автора:");
-            userState.CurrentMenu = MenuState.Main;
-        }
-        // Обработка нажатия на категорию
-        else if (userState.CurrentMenu == MenuState.SearchByCategory && int.TryParse(callbackData, out var categoryId))
-        {
-            var books = _bookRepository.GetByCategory(categoryId);
-            await ShowBooks(chatId, books, "Книги в этой категории:");
-            userState.CurrentMenu = MenuState.Main;
-        }
-        // Обработка нажатия на книгу
-        else if (int.TryParse(callbackData, out var bookId))
-        {
-            await ShowBookDetails(chatId, bookId);
-            userState.CurrentMenu = MenuState.BookDetails;
-        }
-        // Обработка кнопки "Назад"
-        else if (callbackData == "back")
-        {
-            await ShowMainMenu(chatId);
-            userState.CurrentMenu = MenuState.Main;
-        }
-        // Обработка добавления в корзину
-        else if (callbackData.StartsWith("add_") && int.TryParse(callbackData.Substring(4), out var bookIdToAdd))
-        {
-            _cartRepository.AddOrUpdateItem(userId, bookIdToAdd);
-            await botClient.AnswerCallbackQuery(
-                callbackQueryId: callbackQuery.Id,
-                text: "Книга добавлена в корзину");
-        }
-        // Обработка оформления заказа
-        else if (callbackData == "checkout")
-        {
-            var cartItems = _cartRepository.GetUserCart(userId);
-            if (cartItems.Any())
+            // Обработка нажатия на автора
+            if (userState.CurrentMenu == MenuState.SearchByAuthor && int.TryParse(callbackData, out var authorId))
             {
-                _orderRepository.CreateOrder(userId, cartItems);
+                var books = _bookRepository.GetByAuthor(authorId);
+                await ShowBooks(chatId, books, "Книги этого автора:");
+                userState.CurrentMenu = MenuState.Main;
+            }
+            // Обработка нажатия на категорию
+            else if (userState.CurrentMenu == MenuState.SearchByCategory && int.TryParse(callbackData, out var categoryId))
+            {
+                var books = _bookRepository.GetByCategory(categoryId);
+                await ShowBooks(chatId, books, "Книги в этой категории:");
+                userState.CurrentMenu = MenuState.Main;
+            }
+            // Обработка нажатия на книгу
+            else if (int.TryParse(callbackData, out var bookId))
+            {
+                await ShowBookDetails(chatId, bookId);
+                userState.CurrentMenu = MenuState.BookDetails;
+            }
+            // Обработка кнопки "Назад"
+            else if (callbackData == "back")
+            {
+                await ShowMainMenu(chatId);
+                userState.CurrentMenu = MenuState.Main;
+            }
+            // Обработка добавления в корзину
+            else if (callbackData.StartsWith("add_") && int.TryParse(callbackData.Substring(4), out var bookIdToAdd))
+            {
+                _cartRepository.AddOrUpdateItem(userId, bookIdToAdd);
+                await botClient.AnswerCallbackQuery(
+                    callbackQueryId: callbackQuery.Id,
+                    text: "Книга добавлена в корзину");
+            }
+            // Обработка оформления заказа
+            else if (callbackData == "checkout")
+            {
+                var cartItems = _cartRepository.GetUserCart(userId);
+                if (cartItems.Any())
+                {
+                    _orderRepository.CreateOrder(userId, cartItems);
+                    _cartRepository.ClearCart(userId);
+                    await botClient.AnswerCallbackQuery(
+                        callbackQueryId: callbackQuery.Id,
+                        text: "Заказ оформлен!");
+                    await ShowOrders(chatId, userId);
+                }
+                else
+                {
+                    await botClient.AnswerCallbackQuery(
+                        callbackQueryId: callbackQuery.Id,
+                        text: "Корзина пуста");
+                }
+            }
+            // Обработка очистки корзины
+            else if (callbackData == "clear_cart")
+            {
                 _cartRepository.ClearCart(userId);
                 await botClient.AnswerCallbackQuery(
                     callbackQueryId: callbackQuery.Id,
-                    text: "Заказ оформлен!");
-                await ShowOrders(chatId, userId);
+                    text: "Корзина очищена");
+                await ShowCart(chatId, userId);
             }
-            else
-            {
-                await botClient.AnswerCallbackQuery(
-                    callbackQueryId: callbackQuery.Id,
-                    text: "Корзина пуста");
-            }
-        }
-        // Обработка очистки корзины
-        else if (callbackData == "clear_cart")
-        {
-            _cartRepository.ClearCart(userId);
-            await botClient.AnswerCallbackQuery(
-                callbackQueryId: callbackQuery.Id,
-                text: "Корзина очищена");
-            await ShowCart(chatId, userId);
-        }
 
-        // Убираем "часики" с кнопки
-        await botClient.AnswerCallbackQuery(callbackQuery.Id);
+            // Убираем "часики" с кнопки
+            await botClient.AnswerCallbackQuery(callbackQuery.Id);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
     }
 
     private async Task HandleOtherMessages(long chatId, int userId, string messageText, UserState userState)

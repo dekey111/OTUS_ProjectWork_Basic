@@ -182,6 +182,7 @@ public partial class CloudReaderContext : DbContext
             entity.HasIndex(e => e.Accountname, "users_accountname_key").IsUnique();
 
             entity.Property(e => e.Id)
+                .ValueGeneratedNever()
                 .HasComment("Уникальный идентификатор пользователя")
                 .HasColumnName("id");
             entity.Property(e => e.Accountname)

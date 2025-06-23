@@ -30,10 +30,12 @@ services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 services.AddScoped<IBookRepository, BookRepository>();
 services.AddScoped<ICartRepository, CartRepository>();
 services.AddScoped<IOrderRepository, OrderRepository>();
+services.AddScoped<IUserRepository, UserRepository>();
 
 // Регистрация сервиса бота
 services.AddSingleton<TelegramBotService>(provider =>
     new TelegramBotService(
+        provider.GetRequiredService<IUserRepository>(),
         provider.GetRequiredService<IBookRepository>(),
         provider.GetRequiredService<ICartRepository>(),
         provider.GetRequiredService<IOrderRepository>(),
